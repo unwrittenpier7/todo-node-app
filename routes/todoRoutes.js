@@ -6,7 +6,9 @@ const todoRouter = express.Router();
 // ✅ Fix: use "content", not "task", and use Mongoose .create()
 todoRouter.post("/add", async (req, res) => {
   try {
+    console.log("body:", req.body); // ✅ Add this
     const { content } = req.body;
+
     if (!content || content.trim() === "") {
       return res.status(400).json({ error: "Content is required" });
     }
