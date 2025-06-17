@@ -3,23 +3,36 @@ import todoModel from "../models/todoModel.js";
 
 const todoRouter = express.Router();
 
-// Add a new todo
+// ✅ Fix: use "content", not "task", and use Mongoose .create()
 todoRouter.post("/add", async (req, res) => {
-  const { task } = req.body;
-  const result = await todoModel.insertOne({ task });
-  return res.json(result); 
+  try {
+    const { content } = req.body;
+    if (!content || content.trim() === "") {
+      return res.status(400).json({ error: "Content is required" });
+    }
+
+    const newTodo = await todoModel.create({ content });
+    res.status(201).json(newTodo);
+  } catch (err) {
+    console.error("Add todo error:", err.message);
+    res.status(500).json({ error: "Failed to add task" });
+  }
 });
 
-// Get all todos
+// ✅ Get all todos
 todoRouter.get("/", async (req, res) => {
   const result = await todoModel.find();
-  return res.json(result);
+  res.json(result);
 });
 
-// Delete a todo by id
+// ✅ Delete a todo by id
 todoRouter.delete("/:id", async (req, res) => {
-  const result = await todoModel.deleteOne({ _id: req.params.id });
-  return res.json({ success: result.deletedCount === 1 });
+  try {
+    const result = await todoModel.deleteOne({ _id: req.params.id });
+    res.json({ success: result.deletedCount === 1 });
+  } catch (err) {
+    res.status(500).json({ error: "Delete failed" });
+  }
 });
 
 export default todoRouter;
