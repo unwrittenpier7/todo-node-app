@@ -1,73 +1,66 @@
-import express from "express";
-import mongoose from "mongoose";
-import cors from "cors";
-import dotenv from "dotenv";
-import todoRouter from "./routes/todoRoutes.js";
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import todoRouter from './routes/todoRoutes.js';
 
-// Load environment variables
 dotenv.config();
-
 const app = express();
 
-// Middleware
-app.use(cors());
+// CORS Middleware
+app.use(cors({
+  origin: ['https://todo-app-react-git-main-joel-peters-projects.vercel.app'], // frontend URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type'],
+}));
+
 app.use(express.json());
 
 // Routes
-app.use("/todos", todoRouter);
+app.use('/todos', todoRouter);
 
-// MongoDB connection (optimized for serverless)
+// MongoDB connection
 const MONGODB_URI = process.env.MONGODB_URI;
-
 if (!MONGODB_URI) {
-  console.error("MONGODB_URI is not defined in environment variables");
-  throw new Error("MONGODB_URI is not defined");
+  console.error('MONGODB_URI is not defined');
+  throw new Error('MONGODB_URI is not defined');
 }
 
-// Cache the MongoDB connection to reuse across serverless invocations
 let cachedDb = null;
 
 async function connectToDatabase() {
   if (cachedDb) {
-    console.log("Using cached MongoDB connection");
+    console.log('✅ Using cached MongoDB connection');
     return cachedDb;
   }
 
   try {
-    console.log("Connecting to MongoDB...");
+    console.log('🔌 Connecting to MongoDB...');
     const db = await mongoose.connect(MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
     cachedDb = db;
-    console.log("MongoDB connected successfully");
+    console.log('✅ MongoDB connected successfully');
     return db;
   } catch (error) {
-    console.error("MongoDB connection error:", error);
+    console.error('❌ MongoDB connection error:', error);
     throw error;
   }
 }
 
-// Middleware to ensure MongoDB is connected before handling requests
-app.use(async (req, res, next) => {
-  try {
-    await connectToDatabase();
-    next();
-  } catch (error) {
-    res.status(500).json({ error: "Failed to connect to the database" });
-  }
+// Connect to DB once (if used in server.js)
+await connectToDatabase();
+
+// Health check
+app.get('/', (req, res) => {
+  res.json({ message: 'Welcome to the To-Do App API' });
 });
 
-// Default route
-app.get("/", (req, res) => {
-  res.send("Welcome to the To-Do App API");
-});
-
-// Error handling middleware to catch unhandled errors
+// Global error handler
 app.use((err, req, res, next) => {
-  console.error("Unhandled error:", err);
-  res.status(500).json({ error: "Internal Server Error" });
+  console.error('Unhandled error:', err.message);
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
-// Export the app for Vercel
 export default app;
